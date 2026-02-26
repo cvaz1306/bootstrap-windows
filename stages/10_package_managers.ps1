@@ -29,15 +29,23 @@ Install-PackageIfMissing -Command "python" -WingetId "Python.Python.3"
 # Install Node.js
 Install-PackageIfMissing -Command "node" -WingetId "OpenJS.NodeJS.LTS"
 
-# Install Rust (rustup)
+# Install Go
+Install-PackageIfMissing -Command "go" -WingetId "GoLang.Go"
+
+# Install Rust (Windows installer)
 if (-not (Get-Command "rustc" -ErrorAction SilentlyContinue)) {
-    Write-Host "Rust not found, installing via rustup..."
-    Invoke-Expression "& { iwr https://sh.rustup.rs -UseBasicParsing | iex }"
+    Write-Host "Rust not found, installing via official Windows installer..."
+    $rustInstaller = "$env:TEMP\rustup-init.exe"
+
+    # Download rustup Windows installer
+    Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile $rustInstaller -UseBasicParsing
+
+    # Run installer silently
+    Start-Process -FilePath $rustInstaller -ArgumentList "-y" -Wait
+
+    Write-Host "Rust installation complete. You may need to restart PowerShell to refresh PATH."
 } else {
     Write-Host "Rust already installed: $(rustc --version)"
 }
-
-# Install Go
-Install-PackageIfMissing -Command "go" -WingetId "GoLang.Go"
 
 Write-Host "Stage 10 complete."

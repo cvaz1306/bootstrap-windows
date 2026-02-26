@@ -1,6 +1,6 @@
 # Tests for 10_package_managers.ps1
 
-$tools = @("git", "python", "node", "rustc", "go")
+$tools = @("git", "python", "node", "go", "rustc")
 
 foreach ($tool in $tools) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
