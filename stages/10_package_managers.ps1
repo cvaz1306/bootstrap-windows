@@ -2,13 +2,17 @@ param([hashtable]$Config)
 
 Write-Host "Stage 10: Installing language runtimes and package tools..."
 
-function Install-PackageIfMissing {
-    param(
-        [string]$Command,
-        [string]$WingetId
-    )
+function Test-CommandInNewProcess {
+    param([string]$Command)
+    $psCmd = "if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) { exit 1 } else { exit 0 }"
+    $proc = Start-Process pwsh -ArgumentList "-NoProfile","-Command $psCmd" -Wait -PassThru
+    return $proc.ExitCode -eq 0
+}
 
-    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) {
+function Install-PackageIfMissing {
+    param([string]$Command, [string]$WingetId)
+
+    if (-not (Test-CommandInNewProcess -Command $Command)) {
         Write-Host "$Command not found, installing via WinGet..."
         try {
             winget install --id $WingetId -e --silent --source winget
@@ -16,36 +20,31 @@ function Install-PackageIfMissing {
             Write-Host "Failed to install $Command via WinGet. Please install manually."
         }
     } else {
-        Write-Host "$Command already installed: $(Get-Command $Command).Source"
+        Write-Host "$Command already installed."
     }
 }
 
-# Install Git (already checked in stage 00, but idempotent)
+# Git
 Install-PackageIfMissing -Command "git" -WingetId "Git.Git"
 
-# Install Python
+# Python
 Install-PackageIfMissing -Command "python" -WingetId "Python.Python.3"
 
-# Install Node.js
+# Node.js
 Install-PackageIfMissing -Command "node" -WingetId "OpenJS.NodeJS.LTS"
 
-# Install Go
+# Go
 Install-PackageIfMissing -Command "go" -WingetId "GoLang.Go"
 
-# Install Rust (Windows installer)
-if (-not (Get-Command "rustc" -ErrorAction SilentlyContinue)) {
+# Rust
+if (-not (Test-CommandInNewProcess -Command "rustc")) {
     Write-Host "Rust not found, installing via official Windows installer..."
     $rustInstaller = "$env:TEMP\rustup-init.exe"
-
-    # Download rustup Windows installer
     Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile $rustInstaller -UseBasicParsing
-
-    # Run installer silently
     Start-Process -FilePath $rustInstaller -ArgumentList "-y" -Wait
-
-    Write-Host "Rust installation complete. You may need to restart PowerShell to refresh PATH."
+    Write-Host "Rust installation complete."
 } else {
-    Write-Host "Rust already installed: $(rustc --version)"
+    Write-Host "Rust already installed."
 }
 
 Write-Host "Stage 10 complete."
