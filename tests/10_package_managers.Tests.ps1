@@ -12,17 +12,21 @@ $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) {
     throw "No PowerShell executable found"
 }
 
-$psCommand = {
-    param($tools)
-    foreach ($tool in $tools) {
-        if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
-            throw "$tool is not installed"
-        } else {
-            Write-Host "$tool OK: $($tool) found at $(Get-Command $tool).Source"
-        }
+# Serialize tools array into a comma-separated string
+$toolsArg = $tools -join ','
+
+# Build command to run in new process
+$psCommand = @"
+\$tools = '$toolsArg'.Split(',')
+foreach (\$tool in \$tools) {
+    if (-not (Get-Command \$tool -ErrorAction SilentlyContinue)) {
+        throw "\$tool is not installed"
+    } else {
+        Write-Host "\$tool OK: \$((Get-Command \$tool).Source)"
     }
-    Write-Host "All package manager tests passed."
 }
+Write-Host "All package manager tests passed."
+"@
 
 # Start a new PowerShell process for the test
-Start-Process $psExe -ArgumentList "-NoProfile", "-Command & { & $psCommand -tools $using:tools }" -Wait
+Start-Process $psExe -ArgumentList "-NoProfile", "-Command $psCommand" -Wait
