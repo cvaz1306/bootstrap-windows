@@ -12,21 +12,22 @@ $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) {
     throw "No PowerShell executable found"
 }
 
-# Serialize tools array into a comma-separated string
-$toolsArg = $tools -join ','
-
-# Build command to run in new process
-$psCommand = @"
-\$tools = '$toolsArg'.Split(',')
-foreach (\$tool in \$tools) {
-    if (-not (Get-Command \$tool -ErrorAction SilentlyContinue)) {
-        throw "\$tool is not installed"
-    } else {
-        Write-Host "\$tool OK: \$((Get-Command \$tool).Source)"
+# Build the script block for the new process
+$script = {
+    param($tools)
+    foreach ($tool in $tools) {
+        if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+            throw "$tool is not installed"
+        } else {
+            Write-Host "$tool OK: $((Get-Command $tool).Source)"
+        }
     }
+    Write-Host "All package manager tests passed."
 }
-Write-Host "All package manager tests passed."
-"@
 
-# Start a new PowerShell process for the test
-Start-Process $psExe -ArgumentList "-NoProfile", "-Command $psCommand" -Wait
+# Encode the script for safe passing
+$bytes = [System.Text.Encoding]::Unicode.GetBytes("param(`$tools) `n " + ($script.ToString()))
+$encoded = [Convert]::ToBase64String($bytes)
+
+# Start a new PowerShell process with -EncodedCommand
+Start-Process $psExe -ArgumentList "-NoProfile", "-EncodedCommand $encoded" -Wait -PassThru
