@@ -4,11 +4,20 @@ Write-Host "Stage 10: Installing language runtimes and package tools..."
 
 function Test-CommandInNewProcess {
     param([string]$Command)
+
+    # Pick a PowerShell executable
+    $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+        "pwsh"
+    } elseif (Get-Command powershell -ErrorAction SilentlyContinue) {
+        "powershell"
+    } else {
+        throw "No PowerShell executable found"
+    }
+
     $psCmd = "if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) { exit 1 } else { exit 0 }"
-    $proc = Start-Process pwsh -ArgumentList "-NoProfile","-Command $psCmd" -Wait -PassThru
+    $proc = Start-Process $psExe -ArgumentList "-NoProfile","-Command $psCmd" -Wait -PassThru
     return $proc.ExitCode -eq 0
 }
-
 function Install-PackageIfMissing {
     param([string]$Command, [string]$WingetId)
 

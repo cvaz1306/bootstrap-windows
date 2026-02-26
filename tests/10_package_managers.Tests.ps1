@@ -3,6 +3,15 @@
 
 $tools = @("git", "python", "node", "go", "rustc")
 
+# Determine available PowerShell executable
+$psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+    "pwsh"
+} elseif (Get-Command powershell -ErrorAction SilentlyContinue) {
+    "powershell"
+} else {
+    throw "No PowerShell executable found"
+}
+
 $psCommand = {
     param($tools)
     foreach ($tool in $tools) {
@@ -16,4 +25,4 @@ $psCommand = {
 }
 
 # Start a new PowerShell process for the test
-Start-Process pwsh -ArgumentList "-NoProfile", "-Command & { & $psCommand -tools $using:tools }" -Wait
+Start-Process $psExe -ArgumentList "-NoProfile", "-Command & { & $psCommand -tools $using:tools }" -Wait
